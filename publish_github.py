@@ -13,6 +13,7 @@ remote URL、git config 或日志输出。需要 classic PAT 的 repo 权限。
     python publish_github.py --token <PAT>
     GITHUB_TOKEN=<PAT> python publish_github.py
     python publish_github.py --token <PAT> --repo werewolf-boards --skip-pages
+    GITHUB_TOKEN=<PAT> python publish_github.py --dir ../werewolf-db-public --repo werewolf-db
 """
 import argparse
 import base64
@@ -96,12 +97,15 @@ def align_local(sha):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="发布版型库到 GitHub Pages")
+    global ROOT
+    ap = argparse.ArgumentParser(description="发布静态站到 GitHub Pages")
     ap.add_argument("--token", default=os.environ.get("GITHUB_TOKEN", ""), help="GitHub PAT")
     ap.add_argument("--user", default="", help="GitHub 用户名（默认取 token 所属账号）")
     ap.add_argument("--repo", default="werewolf-boards", help="仓库名")
+    ap.add_argument("--dir", default=str(ROOT), help="要发布的目录（默认脚本所在目录）")
     ap.add_argument("--skip-pages", action="store_true", help="只同步仓库，不碰 Pages 设置")
     a = ap.parse_args()
+    ROOT = Path(a.dir).resolve()
 
     token = (a.token or "").strip()
     if not token:

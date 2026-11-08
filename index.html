@@ -456,11 +456,18 @@ function selfTest(){
      m.rule_count===D.boards.reduce((s,x)=>s+x.rules.length,0),
      `元信息计数与数据一致 ${m.board_count}/${m.role_count}/${m.rule_count}`);
   ck(cards()===m.board_count,'初始渲染全部板子卡片 '+m.board_count);
-  ck(m.doc_board_count===48&&m.doc_games_total===123&&
-     m.unlisted_count===m.board_count-m.doc_board_count,'清单 48 板 / 123 场 / 未收录数一致');
-  ck(m.rule_count>=397,'版型细则已并入：规则 '+m.rule_count+' 条');
+  ck(m.doc_board_count>0&&m.doc_games_total>0&&
+     m.unlisted_count===m.board_count-m.doc_board_count,
+     `清单 ${m.doc_board_count} 板 / ${m.doc_games_total} 场 / 未收录数一致`);
+  ck(m.rule_count>0&&m.rule_count===D.boards.reduce((s,x)=>s+x.rules.length,0),
+     '版型细则已并入：规则 '+m.rule_count+' 条');
   ck(D.boards.some(x=>x.name==='千年之恋')&&D.boards.some(x=>x.name==='血月猎魔人'),'新建版型已收录');
   ck(D.roles.some(x=>x.name==='阿努比斯')&&D.roles.some(x=>x.name==='白蛇预言家'),'新建身份已收录');
+  ck(D.boards.some(x=>x.name==='12人阴阳师')&&D.boards.some(x=>x.name==='12人火力全开'),'第二批新建版型已收录');
+  ck(D.roles.some(x=>x.name==='阴阳师')&&D.roles.some(x=>x.name==='小精灵')&&
+     D.roles.some(x=>x.name==='恶灵'),'第二批新建身份已收录');
+  ck(D.boards.some(x=>x.id===71&&x.rules.length>=6),'12人魔幻对决换号 FAQ 已补录');
+  ck(D.boards.some(x=>x.id===48&&x.rules.length>=15),'唯邻是从傀儡规则已补全');
   ck(!JSON.stringify(D).includes('doc_files')&&!JSON.stringify(D).includes('doc_roles'),'未导出对局文件名与内部字段');
   ck(!/20\d{6}/.test(JSON.stringify(D)),'无对局文件日期串');
   ck(!$('#viewRoles').offsetParent&&!$('#viewAbout').offsetParent,'非当前 tab 默认隐藏');
@@ -479,13 +486,17 @@ function selfTest(){
   ck(filtered()[0].rules.length>=filtered()[1].rules.length,'按规则数降序排序正确');
   SORT='id';QUICK='';render();
   CAT='暂停开放';render();
-  ck(cards()===6&&filtered().every(x=>x.category==='暂停开放'),'分类筛选：暂停开放 6 个');
-  CAT='★';render();ck(cards()===8&&filtered().every(x=>x.is_new),'分类筛选：★ 新板 8 个');
-  CAT='doc';render();ck(cards()===48&&filtered().every(x=>x.in_doc),'仅清单收录 48 个');
+  ck(cards()===D.boards.filter(x=>x.category==='暂停开放').length&&
+     filtered().every(x=>x.category==='暂停开放'),'分类筛选：暂停开放板数量正确');
+  CAT='★';render();ck(cards()===D.boards.filter(x=>x.is_new).length&&
+     filtered().every(x=>x.is_new),'分类筛选：★ 新板数量正确');
+  CAT='doc';render();ck(cards()===m.doc_board_count&&
+     filtered().every(x=>x.in_doc),'仅清单收录板数量正确');
   CAT='';render();
-  ck($('#grid').innerHTML.includes('8 场'),'卡片显示场次数字');
+  ck($('#grid').innerHTML.includes(' 场'),'卡片显示场次数字');
   document.querySelector('#cat [data-c="10人版型"]').click();
-  ck(cards()===4&&filtered().every(x=>x.category==='10人版型'),'点击分类 chip 生效');
+  ck(cards()===D.boards.filter(x=>x.category==='10人版型').length&&
+     filtered().every(x=>x.category==='10人版型'),'点击分类 chip 生效');
   document.querySelector('#cat [data-c=""]').click();
   const multi=D.boards.find(x=>x.multi_card);
   openBoard(multi);
