@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""把本目录发布到 GitHub 并开启 Pages（仅标准库）。
+"""把本目录发布到 GitHub 并开启 Pages（仅标准库，纯 REST API）。
 
-Token 只通过 --token 或环境变量 GITHUB_TOKEN 传入，绝不写进仓库文件、remote URL 或日志。
-需要 classic PAT 的 repo 权限（或 fine-grained token 对该账号仓库的读写权限）。
+为什么不用 git push：某些网络环境（HTTP 代理 / 受限终端）下 git 的
+https 传输会挂起或反复索要用户名，而 REST API 通道正常。本脚本直接
+通过 GitHub Git Data API 写入完整目录树，不依赖任何 git 网络操作。
+
+Token 只通过 --token 或环境变量 GITHUB_TOKEN 传入，绝不写进仓库文件、
+remote URL、git config 或日志输出。需要 classic PAT 的 repo 权限。
 
 用法：
-    python publish_github.py --token ghp_xxx
-    GITHUB_TOKEN=ghp_xxx python publish_github.py
-    python publish_github.py --token ghp_xxx --repo werewolf-boards --user your-name
+    python publish_github.py --token <PAT>
+    GITHUB_TOKEN=<PAT> python publish_github.py
+    python publish_github.py --token <PAT> --repo werewolf-boards --skip-pages
 """
 import argparse
+import base64
 import json
 import os
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -23,38 +29,60 @@ ROOT = Path(__file__).resolve().parent
 API = "https://api.github.com"
 
 
-def redact(s, token):
-    return str(s).replace(token, "***") if token else str(s)
+def say(*a):
+    print(*a, flush=True)
 
 
-def api(method, path, token, payload=None):
-    url = API + path
-    body = json.dumps(payload).encode("utf-8") if payload is not None else None
-    req = urllib.request.Request(url, data=body, method=method, headers={
-        "Authorization": "Bearer " + token,
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "werewolf-boards-publisher",
-        "Content-Type": "application/json",
-    })
-    try:
-        with urllib.request.urlopen(req, timeout=25) as r:
-            raw = r.read().decode("utf-8")
-            return r.status, (json.loads(raw) if raw.strip() else {})
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode("utf-8", "replace")
+class GitHub:
+    def __init__(self, token, user, repo):
+        self.token = token
+        self.user = user
+        self.repo = repo
+
+    def __call__(self, method, path, payload=None, timeout=30, absolute=False):
+        url = path if absolute else API + path
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload is not None else None
+        req = urllib.request.Request(url, data=body, method=method, headers={
+            "Authorization": "Bearer " + self.token,
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "werewolf-boards-publisher",
+            "Content-Type": "application/json",
+        })
         try:
-            return e.code, json.loads(raw)
-        except ValueError:
-            return e.code, {"message": raw[:200]}
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                raw = r.read().decode("utf-8")
+                return r.status, (json.loads(raw) if raw.strip() else {})
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode("utf-8", "replace")
+            try:
+                return e.code, json.loads(raw)
+            except ValueError:
+                return e.code, {"message": raw[:200]}
+        except Exception as e:
+            return 0, {"message": type(e).__name__ + ": " + str(e)[:160]}
+
+    def repo_path(self, suffix):
+        return f"/repos/{self.user}/{self.repo}{suffix}"
 
 
-def git(*args, token=None, check=True):
+def git(*args, check=False):
     r = subprocess.run(["git", "-C", str(ROOT)] + list(args),
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
-    out = redact((r.stdout or "") + (r.stderr or ""), token).strip()
+    out = ((r.stdout or "") + (r.stderr or "")).strip()
     if check and r.returncode:
-        raise RuntimeError("git " + " ".join(args[:2]) + " 失败：" + out[:400])
+        raise RuntimeError("git " + " ".join(args[:2]) + " 失败：" + out[:300])
     return r.returncode, out
+
+
+def b64(path):
+    return base64.b64encode(path.read_bytes()).decode("ascii")
+
+
+def align_local(sha):
+    """让本地 main / origin/main 与远端一致，避免下次更新出现非快进。"""
+    git("update-ref", "refs/heads/main", sha)
+    git("update-ref", "refs/remotes/origin/main", sha)
+    git("branch", "--set-upstream-to=origin/main", "main")
 
 
 def main():
@@ -62,93 +90,118 @@ def main():
     ap.add_argument("--token", default=os.environ.get("GITHUB_TOKEN", ""), help="GitHub PAT")
     ap.add_argument("--user", default="", help="GitHub 用户名（默认取 token 所属账号）")
     ap.add_argument("--repo", default="werewolf-boards", help="仓库名")
-    ap.add_argument("--skip-pages", action="store_true", help="只推仓库，不开 Pages")
+    ap.add_argument("--skip-pages", action="store_true", help="只同步仓库，不碰 Pages 设置")
     a = ap.parse_args()
 
     token = (a.token or "").strip()
     if not token:
         raise SystemExit("缺少 token：用 --token 传入，或设置环境变量 GITHUB_TOKEN")
 
-    code, me = api("GET", "/user", token)
+    code, me = GitHub(token, "", "")("GET", "/user")
     if code != 200:
-        raise SystemExit(f"token 无效（HTTP {code}）：{me.get('message','')}")
+        raise SystemExit(f"token 无效（HTTP {code}）：{me.get('message', '')}")
     user = a.user or me["login"]
-    print(f"账号：{user}｜仓库：{a.repo}")
+    gh = GitHub(token, user, a.repo)
+    say(f"账号：{user}｜仓库：{a.repo}")
 
-    code, r = api("POST", "/user/repos", token, {
+    code, r = gh("POST", "/user/repos", {
         "name": a.repo,
         "description": "狼人杀版型库：板子配置 / 身份构成 / 特殊规则（只读、零依赖）",
         "homepage": f"https://{user}.github.io/{a.repo}/",
-        "private": False,
-        "has_issues": False,
-        "has_wiki": False,
-        "has_projects": False,
+        "private": False, "has_issues": False, "has_wiki": False, "has_projects": False,
     })
     if code == 201:
-        print("仓库已创建")
+        say("仓库已创建")
     elif code == 422:
-        print("仓库已存在，复用")
+        say("仓库已存在，复用")
     else:
-        raise SystemExit(f"创建仓库失败（HTTP {code}）：{r.get('message','')}")
+        raise SystemExit(f"创建仓库失败（HTTP {code}）：{r.get('message', '')}")
 
-    # 本地仓库初始化与提交（保留已有历史，不重复提交）
-    if not (ROOT / ".git").exists():
-        git("init", "-b", "main", token=token)
-    cur, branch = git("branch", "--show-current", token=token, check=False)
-    if branch != "main":
-        code_b, _ = git("checkout", "-b", "main", token=token, check=False)
-        if code_b:
-            git("branch", "-M", "main", token=token)
-    git("add", "-A", token=token)
-    _, status = git("status", "--porcelain", token=token)
-    if status:
-        code_c, out = git("commit", "-m", "版型库：69 板型 / 120 身份 / 184 规则", token=token, check=False)
-        print("已提交：" + ("成功" if code_c == 0 else out[:200]))
+    # 本地暂存区与工作区对齐（纯本地操作，不联网）
+    if (ROOT / ".git").exists():
+        git("add", "-A")
+    _, listing = git("ls-files", "-z")
+    paths = [p for p in listing.split("\0") if p.strip()]
+    if not paths:
+        raise SystemExit("没有可发布的文件")
+    say(f"本地文件 {len(paths)} 个")
+
+    # 空仓库（无任何 ref）时 Git Data API 会返回 409，先用 Contents API 落一个初始提交
+    code, ref = gh("GET", gh.repo_path("/git/ref/heads/main"))
+    if code == 200:
+        head_sha = ref["object"]["sha"]
     else:
-        print("无新改动，跳过提交")
+        seed = ".gitignore" if ".gitignore" in paths else paths[0]
+        code, j = gh("PUT", gh.repo_path("/contents/" + seed),
+                     {"message": "初始化仓库", "content": b64(ROOT / seed), "branch": "main"})
+        if code not in (200, 201):
+            raise SystemExit(f"初始提交失败（HTTP {code}）：{j.get('message', '')}")
+        head_sha = j["commit"]["sha"]
+        say("已创建 main 分支（初始提交）")
 
-    remote = f"https://github.com/{user}/{a.repo}.git"
-    _, existing = git("remote", "get-url", "origin", token=token, check=False)
-    if existing != remote:
-        code_r, _ = git("remote", "remove", "origin", token=token, check=False)
-        git("remote", "add", "origin", remote, token=token)
+    # 上传全部文件为 blob，构造完整目录树
+    tree = []
+    for f in paths:
+        code, j = gh("POST", gh.repo_path("/git/blobs"),
+                     {"content": b64(ROOT / f), "encoding": "base64"})
+        if code not in (200, 201) or "sha" not in j:
+            raise SystemExit(f"上传 {f} 失败（HTTP {code}）：{j.get('message', '')}")
+        tree.append({"path": f, "mode": "100644", "type": "blob", "sha": j["sha"]})
+    code, j = gh("POST", gh.repo_path("/git/trees"), {"tree": tree})
+    if code != 201:
+        raise SystemExit(f"创建目录树失败（HTTP {code}）：{j.get('message', '')}")
+    tree_sha = j["sha"]
 
-    # 通过 http.extraheader 传递凭据，不把 token 写进 remote 或命令行 URL
-    push = subprocess.run(
-        ["git", "-C", str(ROOT), "-c", "http.extraheader=AUTHORIZATION: bearer " + token,
-         "push", "-u", "origin", "main"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace")
-    push_out = redact((push.stdout or "") + (push.stderr or ""), token).strip()
-    if push.returncode:
-        raise SystemExit("推送失败：" + push_out[:600])
-    print("推送完成：main")
-
-    if a.skip_pages:
-        print(f"仓库地址：https://github.com/{user}/{a.repo}")
-        return
-
-    code, p = api("POST", f"/repos/{user}/{a.repo}/pages", token,
-                  {"source": {"branch": "main", "path": "/"}})
-    if code == 201:
-        print("Pages 已开启")
-    elif code == 409:
-        print("Pages 已存在，触发重建")
-        api("PUT", f"/repos/{user}/{a.repo}/pages", token,
-            {"source": {"branch": "main", "path": "/"}})
+    code, head = gh("GET", gh.repo_path("/git/commits/" + head_sha))
+    if code == 200 and head.get("tree", {}).get("sha") == tree_sha:
+        say("远端内容与本地完全一致，跳过提交")
     else:
-        print(f"Pages 开启返回 HTTP {code}：{p.get('message','')}（可稍后在仓库设置里手动开启）")
+        code, j = gh("POST", gh.repo_path("/git/commits"), {
+            "message": "更新版型库数据", "tree": tree_sha, "parents": [head_sha],
+        })
+        if code != 201:
+            raise SystemExit(f"创建提交失败（HTTP {code}）：{j.get('message', '')}")
+        head_sha = j["sha"]
+        code, j = gh("PATCH", gh.repo_path("/git/refs/heads/main"), {"sha": head_sha})
+        if code != 200:
+            raise SystemExit(f"更新 main 失败（HTTP {code}）：{j.get('message', '')}")
+        say("已推送 main（" + head_sha[:8] + "）")
+
+    if (ROOT / ".git").exists():
+        align_local(head_sha)
 
     link = f"https://{user}.github.io/{a.repo}/"
-    for _ in range(12):
-        code, s = api("GET", f"/repos/{user}/{a.repo}/pages", token)
-        if code == 200 and s.get("status") == "built":
-            print("Pages 构建完成：" + link)
-            break
-        time.sleep(5)
+    if a.skip_pages:
+        say(f"仓库地址：https://github.com/{user}/{a.repo}")
+        return
+
+    code, p = gh("GET", gh.repo_path("/pages"))
+    if code == 404:
+        code, p = gh("POST", gh.repo_path("/pages"), {"source": {"branch": "main", "path": "/"}})
+        say("Pages 已开启" if code == 201 else f"Pages 开启返回 HTTP {code}：{p.get('message', '')}")
+    elif code == 200:
+        src = p.get("source", {})
+        if src.get("branch") != "main" or src.get("path") not in ("/", ""):
+            gh("PUT", gh.repo_path("/pages"), {"source": {"branch": "main", "path": "/"}})
+            say("Pages 配置已修正为 main / root")
+        else:
+            say("Pages 配置已是 main / root")
     else:
-        print("Pages 仍在构建，稍后访问：" + link)
-    print(f"仓库地址：https://github.com/{user}/{a.repo}")
+        say(f"Pages 查询返回 HTTP {code}（可稍后在仓库设置里手动开启）")
+
+    for _ in range(8):
+        code, s = gh("GET", gh.repo_path("/pages"))
+        if code == 200 and s.get("status") == "built":
+            say("Pages 构建完成：" + link)
+            break
+        time.sleep(3)
+    else:
+        say("Pages 仍在构建，稍后访问：" + link)
+    say(f"仓库地址：https://github.com/{user}/{a.repo}")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(130)

@@ -64,9 +64,11 @@ python publish_github.py --token <GitHub PAT>
 # 或者：GITHUB_TOKEN=<GitHub PAT> python publish_github.py
 ```
 
-脚本会依次：验证 token → 创建或复用仓库 → `git init / add / commit` → 推送 `main` → 开启 Pages 并等待构建 → 打印在线地址。token 只通过参数或环境变量传入，不写进仓库文件、remote URL 或日志输出；需要 classic PAT 的 `repo` 权限。
+脚本走 **GitHub REST API**（不调用 `git push`）：验证 token → 创建或复用仓库 → 把目录内全部文件写成 blob / 目录树 → 创建提交并更新 `main` → 开启 Pages 并等待构建 → 打印在线地址。重复运行是幂等的：远端目录树与本地一致时不会新建提交。token 只通过参数或环境变量传入，不写进仓库文件、remote URL、git config 或日志输出；需要 classic PAT 的 `repo` 权限。
 
-也可以完全手动：`git remote add origin <仓库地址>` 推送后，在仓库 Settings → Pages 里选 `main / root`。
+> 为什么不用 `git push`：部分代理 / 受限终端环境下，git 的 HTTPS 传输会挂起或反复索要用户名，而 REST API 通道正常。脚本只在本机执行 `git add` / `update-ref` 这类纯本地操作，用来让本地仓库与远端对齐。
+
+也可以完全手动：在仓库 Settings → Pages 里选 `main / root`，文件用网页上传或普通 git 推送均可（若你的网络允许）。
 
 ## 许可
 
