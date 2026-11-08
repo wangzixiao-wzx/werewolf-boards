@@ -452,13 +452,19 @@ function selfTest(){
   const ck=(c,n)=>R.push((c?'OK   ':'FAIL ')+n);
   const cards=()=>$('#grid').querySelectorAll('.bcard').length;
   const m=D.meta;
-  ck(m.board_count===70&&m.role_count===120&&m.rule_count===184,'元信息 70 板 / 120 身份 / 184 规则');
-  ck(cards()===70,'初始渲染 70 张板子卡片');
-  ck(m.doc_board_count===48&&m.doc_games_total===123&&m.unlisted_count===22,'清单 48 板 / 123 场 / 22 未收录');
+  ck(m.board_count===D.boards.length&&m.role_count===D.roles.length&&
+     m.rule_count===D.boards.reduce((s,x)=>s+x.rules.length,0),
+     `元信息计数与数据一致 ${m.board_count}/${m.role_count}/${m.rule_count}`);
+  ck(cards()===m.board_count,'初始渲染全部板子卡片 '+m.board_count);
+  ck(m.doc_board_count===48&&m.doc_games_total===123&&
+     m.unlisted_count===m.board_count-m.doc_board_count,'清单 48 板 / 123 场 / 未收录数一致');
+  ck(m.rule_count>=397,'版型细则已并入：规则 '+m.rule_count+' 条');
+  ck(D.boards.some(x=>x.name==='千年之恋')&&D.boards.some(x=>x.name==='血月猎魔人'),'新建版型已收录');
+  ck(D.roles.some(x=>x.name==='阿努比斯')&&D.roles.some(x=>x.name==='白蛇预言家'),'新建身份已收录');
   ck(!JSON.stringify(D).includes('doc_files')&&!JSON.stringify(D).includes('doc_roles'),'未导出对局文件名与内部字段');
   ck(!/20\d{6}/.test(JSON.stringify(D)),'无对局文件日期串');
   ck(!$('#viewRoles').offsetParent&&!$('#viewAbout').offsetParent,'非当前 tab 默认隐藏');
-  Q='女巫';render();const a=cards();ck(a>0&&a<70,`搜索「女巫」命中 ${a} 个`);
+  Q='女巫';render();const a=cards();ck(a>0&&a<m.board_count,`搜索「女巫」命中 ${a} 个`);
   Q='网易';render();ck(cards()>=23&&filtered().some(x=>x.category==='网易官方'),'按分类关键词搜索命中');
   Q='绝不可能存在xyz';render();ck(cards()===0,'无结果时显示空态');
   Q='';SEAT='12';render();const b=cards();
@@ -491,7 +497,15 @@ function selfTest(){
   closeModal();
   ck(configText(D.boards[0]).startsWith('【'),'配置复制文本可生成');
   ck(configText(D.boards.find(x=>x.id===18)).includes('分类：网易官方'),'复制文本含分类');
-  ck($('#viewRoles').querySelectorAll('.rolebtn').length===120,'身份索引渲染 120 个身份');
+  openBoard(D.boards.find(x=>x.id===16));
+  ck($('#modal').textContent.includes('白昼学者')&&$('#modal').textContent.includes('寂夜导师'),
+     '时波之乱详情含新增细则');
+  closeModal();
+  openBoard(D.boards.find(x=>x.name==='千年之恋'));
+  ck($('#modal').textContent.includes('白蛇预言家')&&$('#modal').textContent.includes('许仙寻香魅影'),
+     '新建版型详情显示第三方身份');
+  closeModal();
+  ck($('#viewRoles').querySelectorAll('.rolebtn').length===m.role_count,'身份索引渲染全部身份');
   document.querySelector('[data-tab="roles"]').click();
   ck(!$('#viewRoles').classList.contains('hidden')&&$('#viewBoards').classList.contains('hidden'),'tab 切换到身份索引');
   document.querySelector('[data-tab="boards"]').click();
