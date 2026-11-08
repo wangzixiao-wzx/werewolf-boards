@@ -55,6 +55,20 @@
   .chip:hover{border-color:var(--border2);color:var(--text)}
   .chip.on{background:#463657;border-color:#8a6fb0;color:#fff}
   .hintline{color:var(--muted);font-size:12.5px;margin-top:11px;min-height:20px;word-break:break-all}
+  .catbar{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+  .catbar .chip{font-size:12px;padding:4px 10px}
+  .cat{display:inline-block;border:1px solid var(--border2);border-radius:6px;
+    padding:0 6px;font-size:11px;line-height:1.65;margin-right:5px;white-space:nowrap}
+  .cat.official{color:#9fd2ff;border-color:#3c6785;background:#1b2b3a}
+  .cat.other{color:#dcc0ff;border-color:#614779;background:#291f36}
+  .cat.paused{color:#ffb3b3;border-color:#7d3f3f;background:#331f22}
+  .cat.ten{color:#a9e5bf;border-color:#3a6c4d;background:#1b2e23}
+  .cat.none{color:var(--muted);background:var(--bg2)}
+  .games{color:var(--gold);margin-right:7px;white-space:nowrap}
+  .star{color:#ffd76a;white-space:nowrap}
+  .pausedtag{color:#ffb3b3;white-space:nowrap}
+  .docbox{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;margin:10px 0;font-size:12.5px;color:var(--muted);word-break:break-word}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:13px;min-width:0}
   .bcard{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
@@ -140,7 +154,7 @@
 <body>
 <div class="wrap">
   <h1><span class="mark">◈</span> 狼人杀版型库</h1>
-  <p class="sub">板子配置 · 身份构成 · 特殊规则 · 只收录版型，不含玩家数据</p>
+  <p class="sub">板子配置 · 身份构成 · 特殊规则 · 版型分类与场次 · 不含玩家数据</p>
   <div class="stats" id="stats"></div>
 
   <div class="tabs">
@@ -163,6 +177,7 @@
         <button class="btn" id="randomBtn">🎲 随机抽板</button>
       </div>
       <div class="chips" id="quick"></div>
+      <div class="catbar" id="cat"></div>
       <div class="hintline" id="hint"></div>
     </div>
     <div class="grid" id="grid"></div>
@@ -184,7 +199,16 @@ const D = window.BOARD_DATA;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const FCOL = {1:'var(--good)',2:'var(--wolf)',3:'var(--third)',4:'var(--var)'};
 const FNAME = {1:'好人阵营',2:'狼人阵营',3:'第三方',4:'变动阵营'};
-let TAB='boards', Q='', SEAT='', SORT='id', QUICK='', ROLE='';
+let TAB='boards', Q='', SEAT='', SORT='id', QUICK='', ROLE='', CAT='';
+const CATCLS={'网易官方':'official','其他版型':'other','暂停开放':'paused',
+              '10人版型':'ten','未收录清单':'none'};
+function catTag(b){
+  let s=`<span class="cat ${CATCLS[b.category]||'none'}">${esc(b.category)}</span>`;
+  if(b.in_doc)s+=`<span class="games">${b.games} 场</span>`;
+  if(b.is_new)s+='<span class="star" title="2025—2026 新板">★</span> ';
+  if(b.status==='暂停开放')s+='<span class="pausedtag">⏸ 暂停开放</span> ';
+  return s;
+}
 
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
@@ -217,7 +241,8 @@ function init(){
   const m=D.meta;
   $('#stats').innerHTML=[
     ['版型',m.board_count],['身份',m.role_count],['特殊规则',m.rule_count],
-    ['阵营',m.faction_count],['更新',m.generated]
+    ['阵营',m.faction_count],['清单收录',m.doc_board_count],
+    ['清单场次',m.doc_games_total],['更新',m.generated]
   ].map(([k,v])=>`<span class="stat"><b>${esc(v)}</b>${esc(k)}</span>`).join('');
   const seats=[...new Set(D.boards.map(b=>b.seats))].sort((a,b)=>a-b);
   seats.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n+' 人';$('#seatSel').appendChild(o);});
@@ -225,6 +250,11 @@ function init(){
     ['','全部'],['12','12 人'],['10','10 人'],['9','9 人'],['6','6 人'],
     ['third','含第三方'],['var','含变动阵营'],['rule','有特殊规则'],['multi','牌数≠座位数']
   ].map(([v,t])=>`<span class="chip${v===''?' on':''}" data-q="${v}">${t}</span>`).join('');
+  $('#cat').innerHTML=[
+    ['','全部分类'],['网易官方','网易官方'],['其他版型','其他版型'],
+    ['暂停开放','暂停开放'],['10人版型','10 人版型'],['未收录清单','未收录清单'],
+    ['doc','仅清单收录'],['★','★ 新板']
+  ].map(([v,t])=>`<span class="chip${v===''?' on':''}" data-c="${v}">${t}</span>`).join('');
   renderRoles(); renderAbout(); bind(); render();
 }
 function bind(){
@@ -235,6 +265,12 @@ function bind(){
     const c=e.target.closest('[data-q]'); if(!c)return;
     QUICK=c.dataset.q;
     $('#quick').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));
+    render();
+  };
+  $('#cat').onclick=e=>{
+    const c=e.target.closest('[data-c]'); if(!c)return;
+    CAT=c.dataset.c;
+    $('#cat').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));
     render();
   };
   $('#randomBtn').onclick=()=>{
@@ -277,6 +313,9 @@ function filtered(){
     if(QUICK==='rule'&&!b.rules.length)return false;
     if(QUICK==='multi'&&!b.multi_card)return false;
     if(/^\d+$/.test(QUICK)&&String(b.seats)!==QUICK)return false;
+    if(CAT==='★'&&!b.is_new)return false;
+    if(CAT==='doc'&&!b.in_doc)return false;
+    if(CAT&&CAT!=='★'&&CAT!=='doc'&&b.category!==CAT)return false;
     return true;
   });
   const cmp={
@@ -291,6 +330,7 @@ function render(){
   const list=filtered();
   const bits=[];
   if(ROLE)bits.push(`身份「${esc(ROLE)}」`);
+  if(CAT)bits.push(`分类「${esc(CAT==='★'?'★ 新板':CAT==='doc'?'仅清单收录':CAT)}」`);
   bits.push(`共 <b style="color:var(--gold)">${list.length}</b> / ${D.meta.board_count} 个版型`);
   if(ROLE)bits.push('<span class="chip" id="clearRole" style="margin-left:6px">✕ 清除身份筛选</span>');
   $('#hint').innerHTML=bits.join(' · ');
@@ -307,7 +347,7 @@ function render(){
     if(b.note)meta.push(b.note);
     return `<div class="bcard" data-id="${b.id}">
       <div class="bhead"><div class="bname">${esc(b.name)}</div><span class="badge">#${b.id}</span></div>
-      <div class="bmeta">${esc(meta.join(' · '))}</div>
+      <div class="bmeta">${catTag(b)}${esc(meta.join(' · '))}</div>
       <div class="dist">${bar}</div>
       <div class="roles">${chips}</div>
       <div class="bfoot">
@@ -321,6 +361,12 @@ function configText(b){
   const by={};
   merged(b).forEach(c=>{(by[c.faction_id]=by[c.faction_id]||[]).push(`${c.role}×${c.count}`);});
   const lines=[`【${b.name}】${b.seats} 人局 · 身份牌 ${b.card_count} 张`];
+  if(b.in_doc){
+    lines.push(`分类：${b.category} · 清单场次 ${b.games}${b.is_new?' · ★2025—2026 新板':''} · ${b.status}`);
+    if(b.origin)lines.push(`来源判定：${b.origin}`);
+  }else{
+    lines.push('分类：未收录于法官版型清单');
+  }
   [1,2,3,4].forEach(i=>{if(by[i])lines.push(`${FNAME[i]}：${by[i].join('、')}`);});
   if(b.note)lines.push(`备注：${b.note}`);
   if(b.multi_card)lines.push(`注意：身份牌 ${b.card_count} 张 ≠ 座位 ${b.seats} 个（含额外身份牌 / 双身份）`);
@@ -344,6 +390,8 @@ function openBoard(b){
     <div class="dist">${[1,2,3,4].filter(i=>s[i]>0).map(i=>
       `<i style="width:${(s[i]/tot*100).toFixed(2)}%;background:${FCOL[i]}"></i>`).join('')}</div>
     <div class="bmeta">${sum}</div>
+    ${b.in_doc?`<div class="docbox">${catTag(b)}<span style="color:var(--text)">${esc(b.status)}</span>${b.is_new?' · ★ 2025—2026 新板':''}${b.origin?'<br>来源判定：'+esc(b.origin):''}<br><span style="font-size:11.5px">场次为清单统计的对局数；对局文件名与具体日期不公开。</span></div>`
+      :`<div class="docbox"><span class="cat none">未收录清单</span> 该板子未出现在法官版型清单中，暂无场次与来源判定。</div>`}
     <div class="msec"><h4>身份配置</h4><table><thead><tr><th>阵营</th><th>身份</th><th style="text-align:right">张数</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${rules}
     ${b.multi_card?`<div class="warnbox">⚠️ 身份牌 ${b.card_count} 张 ≠ 座位 ${b.seats} 个：此板含盗贼 / 丘比特 / 双身份等多牌机制，座位与牌数不是一一对应。</div>`:''}
@@ -379,13 +427,16 @@ function renderAbout(){
     <h3>数据范围</h3>
     <ul>
       <li><b>${m.board_count}</b> 个版型 · <b>${m.role_count}</b> 个身份 · <b>${m.rule_count}</b> 条特殊规则 · ${m.faction_count} 个阵营</li>
+      <li>其中 <b>${m.doc_board_count}</b> 个版型收录于「法官版型清单」（合计 ${m.doc_games_total} 场对局），另有 ${m.unlisted_count} 个板子清单未收录，标为「未收录清单」。</li>
       <li>数据生成于 <code>${esc(m.generated)}</code>，来源：${esc(m.source)}</li>
       <li>板子的「座位数」与「身份牌张数」可能不等（盗贼 / 丘比特 / 双身份等），页面会单独标注，不视为错误。</li>
     </ul>
+    <h3>版型分类</h3>
+    <p>分类沿用法官版型清单口径：<b>网易官方</b>（网易狼人杀官方体系）、<b>其他版型</b>（网传板 / 群内自创）、<b>暂停开放</b>（备查但不计入开放板池）、<b>10 人版型</b>（单列）。<span class="star">★</span> 为 2025—2026 新板。分类、来源判定与场次都可直接搜索。</p>
     <h3>隐私</h3>
-    <p>${esc(m.disclaimer)} 导出脚本只读取板子 / 身份 / 规则几张配置表，从不读取对局、座位与玩家表，所以仓库里没有任何昵称、战绩或游戏时间。</p>
+    <p>${esc(m.disclaimer)} 导出脚本只读取板子 / 身份 / 规则与清单元数据表，<b>不导出对局文件名、日期与清单原始配置文本</b>，也从不读取对局、座位与玩家表，所以仓库里没有任何昵称、战绩或游戏时间。</p>
     <h3>如何更新</h3>
-    <p>改完本地数据库后运行 <code>python export_boards.py</code>，会重新生成 <code>boards.json</code>、<code>data.js</code> 和 <code>BOARDS.md</code>，提交推送即可。本页是纯静态单文件，零依赖、可离线双击打开。</p>
+    <p>清单有变动时先在主库运行 <code>python apply_board_catalog.py --apply</code>（自动备份），再运行 <code>python export_boards.py</code> 重新生成 <code>boards.json</code>、<code>data.js</code> 与 <code>BOARDS.md</code>，最后用 <code>publish_github.py</code> 同步。本页是纯静态单文件，零依赖、可离线双击打开。</p>
     <h3>文件</h3>
     <ul>
       <li><code>index.html</code> — 本页</li>
@@ -401,10 +452,14 @@ function selfTest(){
   const ck=(c,n)=>R.push((c?'OK   ':'FAIL ')+n);
   const cards=()=>$('#grid').querySelectorAll('.bcard').length;
   const m=D.meta;
-  ck(m.board_count===69&&m.role_count===120&&m.rule_count===184,'元信息 69 板 / 120 身份 / 184 规则');
-  ck(cards()===69,'初始渲染 69 张板子卡片');
+  ck(m.board_count===70&&m.role_count===120&&m.rule_count===184,'元信息 70 板 / 120 身份 / 184 规则');
+  ck(cards()===70,'初始渲染 70 张板子卡片');
+  ck(m.doc_board_count===48&&m.doc_games_total===123&&m.unlisted_count===22,'清单 48 板 / 123 场 / 22 未收录');
+  ck(!JSON.stringify(D).includes('doc_files')&&!JSON.stringify(D).includes('doc_roles'),'未导出对局文件名与内部字段');
+  ck(!/20\d{6}/.test(JSON.stringify(D)),'无对局文件日期串');
   ck(!$('#viewRoles').offsetParent&&!$('#viewAbout').offsetParent,'非当前 tab 默认隐藏');
-  Q='女巫';render();const a=cards();ck(a>0&&a<69,`搜索「女巫」命中 ${a} 个`);
+  Q='女巫';render();const a=cards();ck(a>0&&a<70,`搜索「女巫」命中 ${a} 个`);
+  Q='网易';render();ck(cards()>=23&&filtered().some(x=>x.category==='网易官方'),'按分类关键词搜索命中');
   Q='绝不可能存在xyz';render();ck(cards()===0,'无结果时显示空态');
   Q='';SEAT='12';render();const b=cards();
   ck(b===D.boards.filter(x=>x.seats===12).length,`人数筛选 12 人 = ${b} 个`);
@@ -417,11 +472,25 @@ function selfTest(){
   ROLE='';SORT='rules';render();
   ck(filtered()[0].rules.length>=filtered()[1].rules.length,'按规则数降序排序正确');
   SORT='id';QUICK='';render();
+  CAT='暂停开放';render();
+  ck(cards()===6&&filtered().every(x=>x.category==='暂停开放'),'分类筛选：暂停开放 6 个');
+  CAT='★';render();ck(cards()===8&&filtered().every(x=>x.is_new),'分类筛选：★ 新板 8 个');
+  CAT='doc';render();ck(cards()===48&&filtered().every(x=>x.in_doc),'仅清单收录 48 个');
+  CAT='';render();
+  ck($('#grid').innerHTML.includes('8 场'),'卡片显示场次数字');
+  document.querySelector('#cat [data-c="10人版型"]').click();
+  ck(cards()===4&&filtered().every(x=>x.category==='10人版型'),'点击分类 chip 生效');
+  document.querySelector('#cat [data-c=""]').click();
   const multi=D.boards.find(x=>x.multi_card);
   openBoard(multi);
   ck(!$('#mask').classList.contains('hidden')&&$('#modal').textContent.includes('≠'),'多牌板详情含警示');
   closeModal();
+  openBoard(D.boards.find(x=>x.id===18));
+  ck($('#modal').textContent.includes('来源判定')&&$('#modal').textContent.includes('8 场'),'详情显示来源判定与场次');
+  ck($('#modal').textContent.includes('对局文件名与具体日期不公开'),'详情声明不公开对局文件名');
+  closeModal();
   ck(configText(D.boards[0]).startsWith('【'),'配置复制文本可生成');
+  ck(configText(D.boards.find(x=>x.id===18)).includes('分类：网易官方'),'复制文本含分类');
   ck($('#viewRoles').querySelectorAll('.rolebtn').length===120,'身份索引渲染 120 个身份');
   document.querySelector('[data-tab="roles"]').click();
   ck(!$('#viewRoles').classList.contains('hidden')&&$('#viewBoards').classList.contains('hidden'),'tab 切换到身份索引');
