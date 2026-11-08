@@ -79,10 +79,20 @@ def b64(path):
 
 
 def align_local(sha):
-    """让本地 main / origin/main 与远端一致，避免下次更新出现非快进。"""
-    git("update-ref", "refs/heads/main", sha)
-    git("update-ref", "refs/remotes/origin/main", sha)
-    git("branch", "--set-upstream-to=origin/main", "main")
+    """保持本地工作区干净。
+
+    远端提交由 API 创建，本地对象库里通常没有这个 commit 对象，
+    直接 update-ref 会失败。因此：能对齐就对齐，否则把本地改动提交一次。
+    发布流程完全走 REST API，不依赖 git push，本地与远端 commit sha 不同不影响使用。
+    """
+    ok, _ = git("cat-file", "-e", sha + "^{commit}")
+    if ok == 0:
+        git("update-ref", "refs/heads/main", sha)
+        git("update-ref", "refs/remotes/origin/main", sha)
+    else:
+        _, st = git("status", "--porcelain")
+        if st:
+            git("commit", "-m", "更新版型库数据")
 
 
 def main():
