@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>狼人杀版型库</title>
+<style>
+  :root{
+    --bg:#15121c; --bg2:#1b1625; --panel:#221b2e; --panel2:#1b1624;
+    --border:#3b3050; --border2:#4d3f66; --text:#f2ecfa; --muted:#a99cbb;
+    --gold:#e9c67c; --good:#4fc78d; --wolf:#ef6b6b; --third:#b98bff; --var:#99a4ba;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  .hidden{display:none!important}
+  html,body{margin:0;padding:0;overflow-x:hidden;max-width:100%}
+  body{background:linear-gradient(165deg,#191324,#120f19 55%,#171120);color:var(--text);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    min-height:100vh;-webkit-font-smoothing:antialiased}
+  .wrap{width:100%;max-width:1080px;margin:0 auto;padding:26px 15px 80px;min-width:0}
+  h1{font-size:27px;margin:0 0 5px;letter-spacing:.5px}
+  h1 .mark{color:var(--gold)}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px;overflow-wrap:anywhere;word-break:break-word}
+  .stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:999px;
+    padding:5px 13px;font-size:12.5px;color:var(--muted);min-width:0}
+  .stat b{color:var(--gold);font-size:15px;margin-right:4px}
+
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+    border-radius:var(--radius);padding:16px 17px;margin-bottom:14px;width:100%;min-width:0;
+    overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,.24)}
+  .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+  .tab{background:var(--panel2);border:1px solid var(--border);color:var(--muted);
+    border-radius:10px;padding:8px 16px;font-size:13.5px;cursor:pointer;transition:.15s}
+  .tab:hover{border-color:var(--border2);color:var(--text)}
+  .tab.on{background:linear-gradient(180deg,#4a3a63,#382b4c);border-color:#6a548c;color:#fff}
+
+  .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  input,select{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
+    color:var(--text);padding:10px 12px;font-size:14px;font-family:inherit;outline:none;
+    min-width:0;max-width:100%}
+  input:focus,select:focus{border-color:var(--gold)}
+  #q{flex:1 1 250px;min-width:170px}
+  select{flex:0 1 auto;cursor:pointer}
+  .btn{background:linear-gradient(180deg,#6b4f8f,#4c3769);border:1px solid #8567ad;color:#fff;
+    border-radius:10px;padding:10px 15px;font-size:13.5px;cursor:pointer;font-family:inherit;
+    white-space:nowrap;transition:.15s}
+  .btn:hover{filter:brightness(1.14)}
+  .btn.ghost{background:var(--bg2);border-color:var(--border2);color:var(--muted)}
+  .btn.small{padding:7px 11px;font-size:12.5px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .chip{background:var(--bg2);border:1px solid var(--border);color:var(--muted);border-radius:999px;
+    padding:5px 12px;font-size:12.5px;cursor:pointer;transition:.15s;white-space:nowrap;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .chip:hover{border-color:var(--border2);color:var(--text)}
+  .chip.on{background:#463657;border-color:#8a6fb0;color:#fff}
+  .hintline{color:var(--muted);font-size:12.5px;margin-top:11px;min-height:20px;word-break:break-all}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:13px;min-width:0}
+  .bcard{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px 15px;cursor:pointer;transition:.16s;min-width:0;
+    overflow:hidden;display:flex;flex-direction:column}
+  .bcard:hover{border-color:#8a6fb0;transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.34)}
+  .bhead{display:flex;align-items:flex-start;gap:9px;min-width:0}
+  .bname{font-size:15.5px;font-weight:600;line-height:1.35;word-break:break-all;min-width:0;flex:1}
+  .badge{flex:0 0 auto;background:#3a2c50;border:1px solid #6a548c;color:#e6d7ff;
+    border-radius:8px;padding:2px 8px;font-size:11.5px;white-space:nowrap}
+  .bmeta{color:var(--muted);font-size:11.5px;margin:5px 0 9px;word-break:break-all}
+  .dist{display:flex;height:6px;border-radius:99px;overflow:hidden;background:#2a2237;margin-bottom:11px;gap:1px}
+  .dist i{display:block;height:100%}
+  .roles{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+  .rchip{font-size:11.5px;border-radius:7px;padding:3px 8px;border:1px solid;
+    background:rgba(255,255,255,.035);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .rchip.f1{color:#8ce0b3;border-color:#2f6f51}
+  .rchip.f2{color:#f4a0a0;border-color:#7d3a3a}
+  .rchip.f3{color:#d4b3ff;border-color:#664a8c}
+  .rchip.f4{color:#c3cadd;border-color:#4d566b}
+  .bfoot{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;padding-top:9px;
+    border-top:1px solid var(--border);color:var(--muted);font-size:11.5px}
+  .bfoot .g{color:var(--gold)}
+
+  .empty{text-align:center;color:var(--muted);padding:44px 12px;font-size:14px}
+  .fgroup{margin-bottom:18px;min-width:0}
+  .fgroup h3{font-size:14px;margin:0 0 9px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .fgroup h3::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--fc,var(--muted))}
+  .rolegrid{display:flex;flex-wrap:wrap;gap:7px}
+  .rolebtn{background:var(--bg2);border:1px solid var(--border);border-radius:9px;
+    padding:6px 10px;font-size:12.5px;color:var(--text);cursor:pointer;transition:.15s;max-width:100%}
+  .rolebtn:hover{border-color:var(--fc);background:#2b2238}
+  .rolebtn span{color:var(--muted);font-size:11px;margin-left:5px}
+  .rolebtn.off{opacity:.42}
+
+  .mask{position:fixed;inset:0;background:rgba(8,5,14,.76);z-index:50;display:flex;
+    align-items:center;justify-content:center;padding:14px;overflow-y:auto}
+  .mask.hidden{display:none}
+  .modal{background:linear-gradient(180deg,#251d33,#1a1524);border:1px solid #6a548c;
+    border-radius:16px;width:min(720px,100%);max-height:88vh;overflow-y:auto;padding:20px 21px;
+    box-shadow:0 24px 70px rgba(0,0,0,.6);min-width:0}
+  .mtop{display:flex;align-items:flex-start;gap:10px;min-width:0;margin-bottom:4px}
+  .mtop h2{font-size:20px;margin:0;word-break:break-all;min-width:0;flex:1}
+  .close{background:var(--bg2);border:1px solid var(--border2);color:var(--muted);
+    border-radius:9px;width:32px;height:32px;font-size:17px;cursor:pointer;flex:0 0 auto;line-height:1}
+  .msub{color:var(--muted);font-size:12.5px;margin:0 0 15px;word-break:break-all}
+  .msec{margin:16px 0 0}
+  .msec h4{font-size:13px;color:var(--gold);margin:0 0 8px;font-weight:600;letter-spacing:.4px}
+  table{width:100%;border-collapse:collapse;font-size:13px;display:block;overflow-x:auto}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+  th{color:var(--muted);font-weight:500;font-size:12px}
+  td.f{font-size:12px}
+  ol.rules{margin:0;padding-left:19px;font-size:13px}
+  ol.rules li{margin-bottom:7px;word-break:break-word}
+  ol.rules b{color:var(--gold);font-weight:600;margin-right:5px}
+  .warnbox{background:#3a2a22;border:1px solid #7a5436;color:#f0c799;border-radius:10px;
+    padding:9px 12px;font-size:12.5px;margin-top:12px;word-break:break-word}
+  .mbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+
+  .about h3{font-size:15px;color:var(--gold);margin:18px 0 7px}
+  .about p,.about li{font-size:13.5px;color:#d5cbe4}
+  .about code{background:var(--bg2);border:1px solid var(--border);border-radius:5px;
+    padding:1px 6px;font-size:12.5px;color:var(--gold);word-break:break-all}
+  .about a{color:#b9a2ff}
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(16px);
+    background:#3b2d52;border:1px solid #8a6fb0;color:#fff;padding:9px 17px;border-radius:10px;
+    font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:620px){
+    .wrap{padding:18px 10px 70px}
+    h1{font-size:22px}
+    .card{padding:13px 12px}
+    .grid{grid-template-columns:1fr}
+    .tools{gap:7px}
+    #q{flex:1 1 100%}
+    select{flex:1 1 44%}
+    .btn{flex:1 1 100%}
+    .modal{padding:16px 14px;max-height:92vh}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="mark">◈</span> 狼人杀版型库</h1>
+  <p class="sub">板子配置 · 身份构成 · 特殊规则 · 只收录版型，不含玩家数据</p>
+  <div class="stats" id="stats"></div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="boards">版型库</button>
+    <button class="tab" data-tab="roles">身份索引</button>
+    <button class="tab" data-tab="about">说明 / 数据</button>
+  </div>
+
+  <div id="viewBoards">
+    <div class="card">
+      <div class="tools">
+        <input id="q" type="search" placeholder="搜板名 / 身份 / 规则关键词…（按 / 聚焦）" autocomplete="off">
+        <select id="seatSel"><option value="">全部人数</option></select>
+        <select id="sortSel">
+          <option value="id">按编号</option>
+          <option value="name">按名称</option>
+          <option value="seats">按人数</option>
+          <option value="rules">按规则数</option>
+        </select>
+        <button class="btn" id="randomBtn">🎲 随机抽板</button>
+      </div>
+      <div class="chips" id="quick"></div>
+      <div class="hintline" id="hint"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div id="viewRoles" class="card hidden"></div>
+  <div id="viewAbout" class="card hidden about"></div>
+</div>
+
+<div class="mask hidden" id="mask"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+'use strict';
+const $ = s => document.querySelector(s);
+const D = window.BOARD_DATA;
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const FCOL = {1:'var(--good)',2:'var(--wolf)',3:'var(--third)',4:'var(--var)'};
+const FNAME = {1:'好人阵营',2:'狼人阵营',3:'第三方',4:'变动阵营'};
+let TAB='boards', Q='', SEAT='', SORT='id', QUICK='', ROLE='';
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);}
+function copy(s){
+  const done=()=>toast('已复制到剪贴板');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(done).catch(fb);}
+  else fb();
+  function fb(){const t=document.createElement('textarea');t.value=s;document.body.appendChild(t);
+    t.select();try{document.execCommand('copy');done();}catch(e){toast('复制失败');}t.remove();}
+}
+function merged(b){
+  const m=new Map();
+  b.cards.forEach(c=>{
+    const k=c.faction_id+'|'+c.role;
+    if(m.has(k)) m.get(k).count+=c.count;
+    else m.set(k,{role:c.role,count:c.count,faction_id:c.faction_id,faction:c.faction});
+  });
+  return [...m.values()];
+}
+function dist(b){
+  const s={1:0,2:0,3:0,4:0};
+  b.cards.forEach(c=>s[c.faction_id]=(s[c.faction_id]||0)+c.count);
+  const tot=Object.values(s).reduce((a,x)=>a+x,0)||1;
+  return {s,tot};
+}
+function hasF(b,id){return b.cards.some(c=>c.faction_id===id);}
+
+function init(){
+  if(!D){document.body.innerHTML='<div class="wrap"><div class="card">数据未加载：请确认 data.js 与 index.html 在同一目录。</div></div>';return;}
+  const m=D.meta;
+  $('#stats').innerHTML=[
+    ['版型',m.board_count],['身份',m.role_count],['特殊规则',m.rule_count],
+    ['阵营',m.faction_count],['更新',m.generated]
+  ].map(([k,v])=>`<span class="stat"><b>${esc(v)}</b>${esc(k)}</span>`).join('');
+  const seats=[...new Set(D.boards.map(b=>b.seats))].sort((a,b)=>a-b);
+  seats.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n+' 人';$('#seatSel').appendChild(o);});
+  $('#quick').innerHTML=[
+    ['','全部'],['12','12 人'],['10','10 人'],['9','9 人'],['6','6 人'],
+    ['third','含第三方'],['var','含变动阵营'],['rule','有特殊规则'],['multi','牌数≠座位数']
+  ].map(([v,t])=>`<span class="chip${v===''?' on':''}" data-q="${v}">${t}</span>`).join('');
+  renderRoles(); renderAbout(); bind(); render();
+}
+function bind(){
+  $('#q').oninput=e=>{Q=e.target.value.trim().toLowerCase();render();};
+  $('#seatSel').onchange=e=>{SEAT=e.target.value;render();};
+  $('#sortSel').onchange=e=>{SORT=e.target.value;render();};
+  $('#quick').onclick=e=>{
+    const c=e.target.closest('[data-q]'); if(!c)return;
+    QUICK=c.dataset.q;
+    $('#quick').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));
+    render();
+  };
+  $('#randomBtn').onclick=()=>{
+    const list=filtered();
+    if(!list.length){toast('当前筛选没有版型');return;}
+    openBoard(list[Math.floor(Math.random()*list.length)]);
+  };
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    TAB=t.dataset.tab;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+    $('#viewBoards').classList.toggle('hidden',TAB!=='boards');
+    $('#viewRoles').classList.toggle('hidden',TAB!=='roles');
+    $('#viewAbout').classList.toggle('hidden',TAB!=='about');
+  });
+  $('#grid').onclick=e=>{
+    const c=e.target.closest('.bcard'); if(!c)return;
+    openBoard(D.boards.find(b=>b.id===Number(c.dataset.id)));
+  };
+  $('#viewRoles').onclick=e=>{
+    const c=e.target.closest('.rolebtn'); if(!c)return;
+    ROLE=c.dataset.role;
+    TAB='boards';
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab==='boards'));
+    $('#viewBoards').classList.remove('hidden');$('#viewRoles').classList.add('hidden');$('#viewAbout').classList.add('hidden');
+    render(); window.scrollTo({top:0,behavior:'smooth'});
+  };
+  $('#mask').onclick=e=>{if(e.target.id==='mask')closeModal();};
+  document.onkeydown=e=>{
+    if(e.key==='Escape')closeModal();
+    if(e.key==='/'&&document.activeElement!==$('#q')){e.preventDefault();$('#q').focus();}
+  };
+}
+function filtered(){
+  let list=D.boards.filter(b=>{
+    if(SEAT&&String(b.seats)!==SEAT)return false;
+    if(Q&&!b.search.includes(Q))return false;
+    if(ROLE&&!b.cards.some(c=>c.role===ROLE))return false;
+    if(QUICK==='third'&&!hasF(b,3))return false;
+    if(QUICK==='var'&&!hasF(b,4))return false;
+    if(QUICK==='rule'&&!b.rules.length)return false;
+    if(QUICK==='multi'&&!b.multi_card)return false;
+    if(/^\d+$/.test(QUICK)&&String(b.seats)!==QUICK)return false;
+    return true;
+  });
+  const cmp={
+    id:(a,b)=>a.id-b.id,
+    name:(a,b)=>a.name.localeCompare(b.name,'zh-CN'),
+    seats:(a,b)=>a.seats-b.seats||a.id-b.id,
+    rules:(a,b)=>b.rules.length-a.rules.length||a.id-b.id,
+  }[SORT];
+  return list.sort(cmp);
+}
+function render(){
+  const list=filtered();
+  const bits=[];
+  if(ROLE)bits.push(`身份「${esc(ROLE)}」`);
+  bits.push(`共 <b style="color:var(--gold)">${list.length}</b> / ${D.meta.board_count} 个版型`);
+  if(ROLE)bits.push('<span class="chip" id="clearRole" style="margin-left:6px">✕ 清除身份筛选</span>');
+  $('#hint').innerHTML=bits.join(' · ');
+  const cr=$('#clearRole'); if(cr)cr.onclick=()=>{ROLE='';render();};
+  if(!list.length){$('#grid').innerHTML='<div class="empty">没有匹配的版型，换个关键词试试 🐺</div>';return;}
+  $('#grid').innerHTML=list.map(b=>{
+    const {s,tot}=dist(b);
+    const bar=[1,2,3,4].filter(i=>s[i]>0).map(i=>
+      `<i style="width:${(s[i]/tot*100).toFixed(2)}%;background:${FCOL[i]}" title="${FNAME[i]} ${s[i]}"></i>`).join('');
+    const chips=merged(b).map(c=>
+      `<span class="rchip f${c.faction_id}" title="${esc(c.faction)}">${esc(c.role)}${c.count>1?'×'+c.count:''}</span>`).join('');
+    const meta=[`${b.seats} 人局`,`身份牌 ${b.card_count} 张`];
+    if(b.judge)meta.push(`法官 ${b.judge}`);
+    if(b.note)meta.push(b.note);
+    return `<div class="bcard" data-id="${b.id}">
+      <div class="bhead"><div class="bname">${esc(b.name)}</div><span class="badge">#${b.id}</span></div>
+      <div class="bmeta">${esc(meta.join(' · '))}</div>
+      <div class="dist">${bar}</div>
+      <div class="roles">${chips}</div>
+      <div class="bfoot">
+        <span class="${b.rules.length?'g':''}">${b.rules.length?b.rules.length+' 条特殊规则':'无特殊规则'}</span>
+        ${b.multi_card?'<span class="g">⚠ 牌数≠座位数</span>':''}
+        <span>好人 ${s[1]||0} / 狼 ${s[2]||0}${s[3]?' / 第三方 '+s[3]:''}${s[4]?' / 变动 '+s[4]:''}</span>
+      </div></div>`;
+  }).join('');
+}
+function configText(b){
+  const by={};
+  merged(b).forEach(c=>{(by[c.faction_id]=by[c.faction_id]||[]).push(`${c.role}×${c.count}`);});
+  const lines=[`【${b.name}】${b.seats} 人局 · 身份牌 ${b.card_count} 张`];
+  [1,2,3,4].forEach(i=>{if(by[i])lines.push(`${FNAME[i]}：${by[i].join('、')}`);});
+  if(b.note)lines.push(`备注：${b.note}`);
+  if(b.multi_card)lines.push(`注意：身份牌 ${b.card_count} 张 ≠ 座位 ${b.seats} 个（含额外身份牌 / 双身份）`);
+  if(b.rules.length){
+    lines.push('','特殊规则：');
+    b.rules.forEach((r,i)=>lines.push(`${i+1}. ${r.role?'['+r.role+'] ':''}[${r.key}] ${r.value}`));
+  }
+  return lines.join('\n');
+}
+function openBoard(b){
+  if(!b)return;
+  const {s,tot}=dist(b);
+  const rows=[1,2,3,4].flatMap(fi=>merged(b).filter(c=>c.faction_id===fi).map(c=>
+    `<tr><td class="f" style="color:${FCOL[fi]}">${esc(c.faction)}</td><td>${esc(c.role)}</td><td style="text-align:right">${c.count}</td></tr>`)).join('');
+  const rules=b.rules.length?`<div class="msec"><h4>特殊规则（${b.rules.length}）</h4><ol class="rules">${b.rules.map(r=>
+    `<li>${r.role?`<b>${esc(r.role)}</b>`:''}${r.key?`<b>${esc(r.key)}</b>`:''}${esc(r.value)}</li>`).join('')}</ol></div>`:'';
+  const sum=[1,2,3,4].filter(i=>s[i]>0).map(i=>`${FNAME[i]} ${s[i]}`).join(' · ');
+  $('#modal').innerHTML=`
+    <div class="mtop"><h2>${esc(b.name)}</h2><button class="close" id="mClose">×</button></div>
+    <p class="msub">#${b.id} · ${b.seats} 人局${b.judge?' · 法官 '+b.judge:''} · 身份牌 ${b.card_count} 张${b.note?' · '+esc(b.note):''}</p>
+    <div class="dist">${[1,2,3,4].filter(i=>s[i]>0).map(i=>
+      `<i style="width:${(s[i]/tot*100).toFixed(2)}%;background:${FCOL[i]}"></i>`).join('')}</div>
+    <div class="bmeta">${sum}</div>
+    <div class="msec"><h4>身份配置</h4><table><thead><tr><th>阵营</th><th>身份</th><th style="text-align:right">张数</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${rules}
+    ${b.multi_card?`<div class="warnbox">⚠️ 身份牌 ${b.card_count} 张 ≠ 座位 ${b.seats} 个：此板含盗贼 / 丘比特 / 双身份等多牌机制，座位与牌数不是一一对应。</div>`:''}
+    <div class="mbtns">
+      <button class="btn" id="mCopy">📋 复制配置</button>
+      <button class="btn ghost small" id="mJson">复制 JSON</button>
+      <button class="btn ghost small" id="mBack">关闭</button>
+    </div>`;
+  $('#mask').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+  $('#mClose').onclick=closeModal; $('#mBack').onclick=closeModal;
+  $('#mCopy').onclick=()=>copy(configText(b));
+  $('#mJson').onclick=()=>copy(JSON.stringify(b,null,2));
+}
+function closeModal(){$('#mask').classList.add('hidden');document.body.style.overflow='';}
+function renderRoles(){
+  const used=new Set(D.boards.flatMap(b=>b.cards.map(c=>c.role)));
+  const groups=[1,2,3,4].map(fi=>{
+    const rs=D.roles.filter(r=>r.faction_id===fi);
+    if(!rs.length)return '';
+    return `<div class="fgroup" style="--fc:${FCOL[fi]}"><h3>${FNAME[fi]}（${rs.length}）</h3><div class="rolegrid">${rs.map(r=>
+      `<button class="rolebtn${used.has(r.name)?'':' off'}" data-role="${esc(r.name)}" title="${esc(r.note||r.name)}">${esc(r.name)}<span>${r.board_count} 板</span></button>`).join('')}</div></div>`;
+  }).join('');
+  $('#viewRoles').innerHTML=`<h2 style="font-size:18px;margin:0 0 5px">身份索引</h2>
+    <p class="sub">共 ${D.roles.length} 个身份。点任意身份即可反查使用它的版型；灰色的身份目前未被任何版型收录。</p>${groups}`;
+}
+function renderAbout(){
+  const m=D.meta;
+  $('#viewAbout').innerHTML=`
+    <h2 style="font-size:18px;margin:0 0 5px">说明 / 数据</h2>
+    <h3>这是什么</h3>
+    <p>一份只读的<b>狼人杀版型库</b>：把每个板子的身份构成、阵营分布和特殊规则整理成可搜索、可筛选、可复制的清单。适合开局前选板、给法官发配置、或查「某个身份都在哪些板子里出现」。</p>
+    <h3>数据范围</h3>
+    <ul>
+      <li><b>${m.board_count}</b> 个版型 · <b>${m.role_count}</b> 个身份 · <b>${m.rule_count}</b> 条特殊规则 · ${m.faction_count} 个阵营</li>
+      <li>数据生成于 <code>${esc(m.generated)}</code>，来源：${esc(m.source)}</li>
+      <li>板子的「座位数」与「身份牌张数」可能不等（盗贼 / 丘比特 / 双身份等），页面会单独标注，不视为错误。</li>
+    </ul>
+    <h3>隐私</h3>
+    <p>${esc(m.disclaimer)} 导出脚本只读取板子 / 身份 / 规则几张配置表，从不读取对局、座位与玩家表，所以仓库里没有任何昵称、战绩或游戏时间。</p>
+    <h3>如何更新</h3>
+    <p>改完本地数据库后运行 <code>python export_boards.py</code>，会重新生成 <code>boards.json</code>、<code>data.js</code> 和 <code>BOARDS.md</code>，提交推送即可。本页是纯静态单文件，零依赖、可离线双击打开。</p>
+    <h3>文件</h3>
+    <ul>
+      <li><code>index.html</code> — 本页</li>
+      <li><code>data.js</code> / <code>boards.json</code> — 机器可读快照</li>
+      <li><code>BOARDS.md</code> — 完整清单（GitHub 上可直接阅读）</li>
+      <li><code>export_boards.py</code> — 从数据库重新导出</li>
+    </ul>
+    <p style="color:var(--muted);font-size:12.5px;margin-top:20px">开源许可：MIT · 规则文本来自自建对局复盘整理，各家村规可能不同，实际开局请以主持人口径为准。</p>`;
+}
+/* 仅当 URL 带 ?selftest=1 时跑，用于无头浏览器自动验收；普通访问不会触发 */
+function selfTest(){
+  const R=[];
+  const ck=(c,n)=>R.push((c?'OK   ':'FAIL ')+n);
+  const cards=()=>$('#grid').querySelectorAll('.bcard').length;
+  const m=D.meta;
+  ck(m.board_count===69&&m.role_count===120&&m.rule_count===184,'元信息 69 板 / 120 身份 / 184 规则');
+  ck(cards()===69,'初始渲染 69 张板子卡片');
+  ck(!$('#viewRoles').offsetParent&&!$('#viewAbout').offsetParent,'非当前 tab 默认隐藏');
+  Q='女巫';render();const a=cards();ck(a>0&&a<69,`搜索「女巫」命中 ${a} 个`);
+  Q='绝不可能存在xyz';render();ck(cards()===0,'无结果时显示空态');
+  Q='';SEAT='12';render();const b=cards();
+  ck(b===D.boards.filter(x=>x.seats===12).length,`人数筛选 12 人 = ${b} 个`);
+  SEAT='';QUICK='third';render();
+  ck(filtered().length>0&&filtered().every(x=>x.cards.some(c=>c.faction_id===3)),'含第三方筛选结果正确');
+  QUICK='multi';render();
+  ck(filtered().length>0&&filtered().every(x=>x.multi_card),'牌数≠座位数筛选结果正确');
+  QUICK='';ROLE='预言家';render();
+  ck(filtered().length>0&&filtered().every(x=>x.cards.some(c=>c.role==='预言家')),'身份反查结果正确');
+  ROLE='';SORT='rules';render();
+  ck(filtered()[0].rules.length>=filtered()[1].rules.length,'按规则数降序排序正确');
+  SORT='id';QUICK='';render();
+  const multi=D.boards.find(x=>x.multi_card);
+  openBoard(multi);
+  ck(!$('#mask').classList.contains('hidden')&&$('#modal').textContent.includes('≠'),'多牌板详情含警示');
+  closeModal();
+  ck(configText(D.boards[0]).startsWith('【'),'配置复制文本可生成');
+  ck($('#viewRoles').querySelectorAll('.rolebtn').length===120,'身份索引渲染 120 个身份');
+  document.querySelector('[data-tab="roles"]').click();
+  ck(!$('#viewRoles').classList.contains('hidden')&&$('#viewBoards').classList.contains('hidden'),'tab 切换到身份索引');
+  document.querySelector('[data-tab="boards"]').click();
+  ck(!$('#viewBoards').classList.contains('hidden')&&$('#viewRoles').classList.contains('hidden'),'tab 切回版型库');
+  const vw=window.innerWidth;
+  const over=[...document.querySelectorAll('body *')].filter(e=>{
+    const r=e.getBoundingClientRect();return r.width>0&&r.right>vw+1;
+  }).slice(0,8).map(e=>e.tagName+'.'+String(e.className||'').slice(0,18)+'@'+Math.round(e.getBoundingClientRect().right));
+  ck(!over.length,`视口 ${vw}px 内无元素右侧越界`+(over.length?' → '+over.join(' | '):''));
+  ck(document.documentElement.scrollWidth<=vw+1,'文档无横向滚动');
+  const el=document.createElement('pre');el.id='selftestResult';
+  el.textContent=R.join('\n');
+  el.style.cssText='position:fixed;top:0;left:0;z-index:9999;background:#000;color:#0f0;font-size:11px;padding:8px;max-width:100%;white-space:pre-wrap';
+  document.body.appendChild(el);
+}
+init();
+if(new URLSearchParams(location.search).has('selftest')) setTimeout(selfTest,60);
+})();
+</script>
+</body>
+</html>
