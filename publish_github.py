@@ -86,6 +86,8 @@ def align_local(sha):
     直接 update-ref 会失败。因此：能对齐就对齐，否则把本地改动提交一次。
     发布流程完全走 REST API，不依赖 git push，本地与远端 commit sha 不同不影响使用。
     """
+    if not (ROOT / ".git").exists():
+        return                                   # 纯文件目录，没有本地仓库要对齐
     ok, _ = git("cat-file", "-e", sha + "^{commit}")
     if ok == 0:
         git("update-ref", "refs/heads/main", sha)
@@ -103,6 +105,7 @@ def main():
     ap.add_argument("--user", default="", help="GitHub 用户名（默认取 token 所属账号）")
     ap.add_argument("--repo", default="werewolf-boards", help="仓库名")
     ap.add_argument("--dir", default=str(ROOT), help="要发布的目录（默认脚本所在目录）")
+    ap.add_argument("--desc", default="", help="仓库描述（仅新建仓库时生效）")
     ap.add_argument("--skip-pages", action="store_true", help="只同步仓库，不碰 Pages 设置")
     a = ap.parse_args()
     ROOT = Path(a.dir).resolve()
@@ -120,7 +123,7 @@ def main():
 
     code, r = gh("POST", "/user/repos", {
         "name": a.repo,
-        "description": "狼人杀版型库：板子配置 / 身份构成 / 特殊规则（只读、零依赖）",
+        "description": a.desc or "狼人杀版型库：板子配置 / 身份构成 / 特殊规则（只读、零依赖）",
         "homepage": f"https://{user}.github.io/{a.repo}/",
         "private": False, "has_issues": False, "has_wiki": False, "has_projects": False,
     })
@@ -134,8 +137,14 @@ def main():
     # 本地暂存区与工作区对齐（纯本地操作，不联网）
     if (ROOT / ".git").exists():
         git("add", "-A")
-    _, listing = git("ls-files", "-z")
-    paths = [p for p in listing.split("\0") if p.strip()]
+    rc, listing = git("ls-files", "-z")
+    # 无本地 git 仓库时 ls-files 会在 stderr 报 fatal，不能把报错当成文件名
+    paths = [p for p in listing.split("\0") if p.strip()] if rc == 0 else []
+    if not paths:
+        # 目标目录还没初始化 git：直接枚举文件。发布走 REST API，不依赖本地仓库。
+        paths = [p.relative_to(ROOT).as_posix() for p in sorted(ROOT.rglob("*"))
+                 if p.is_file() and ".git" not in p.parts
+                 and "__pycache__" not in p.parts and p.suffix != ".pyc"]
     if not paths:
         raise SystemExit("没有可发布的文件")
     say(f"本地文件 {len(paths)} 个")
