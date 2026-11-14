@@ -1,9 +1,9 @@
 {
   "meta": {
     "title": "狼人杀版型库",
-    "generated": "2026-11-13",
+    "generated": "2026-11-14",
     "board_count": 108,
-    "role_count": 157,
+    "role_count": 156,
     "rule_count": 1990,
     "faction_count": 4,
     "doc_board_count": 48,
@@ -1068,15 +1068,6 @@
       "boards": [
         50
       ]
-    },
-    {
-      "id": 119,
-      "name": "盗贼（选择猎人，埋白痴）",
-      "faction_id": 1,
-      "faction": "好人阵营",
-      "note": "文档导入自动创建",
-      "board_count": 0,
-      "boards": []
     },
     {
       "id": 120,
