@@ -61,12 +61,12 @@
     padding:0 6px;font-size:11px;line-height:1.65;margin-right:5px;white-space:nowrap}
   .cat.official{color:#9fd2ff;border-color:#3c6785;background:#1b2b3a}
   .cat.other{color:#dcc0ff;border-color:#614779;background:#291f36}
-  .cat.paused{color:#ffb3b3;border-color:#7d3f3f;background:#331f22}
+  .cat.unofficial{color:#ffd9a0;border-color:#7d6a3f;background:#33291c}
   .cat.ten{color:#a9e5bf;border-color:#3a6c4d;background:#1b2e23}
   .cat.none{color:var(--muted);background:var(--bg2)}
   .games{color:var(--gold);margin-right:7px;white-space:nowrap}
   .star{color:#ffd76a;white-space:nowrap}
-  .pausedtag{color:#ffb3b3;white-space:nowrap}
+  .unofficialtag{color:#ffd9a0;white-space:nowrap}
   .docbox{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
     padding:10px 12px;margin:10px 0;font-size:12.5px;color:var(--muted);word-break:break-word}
 
@@ -200,13 +200,13 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&
 const FCOL = {1:'var(--good)',2:'var(--wolf)',3:'var(--third)',4:'var(--var)'};
 const FNAME = {1:'好人阵营',2:'狼人阵营',3:'第三方',4:'变动阵营'};
 let TAB='boards', Q='', SEAT='', SORT='id', QUICK='', ROLE='', CAT='';
-const CATCLS={'网易官方':'official','其他版型':'other','暂停开放':'paused',
+const CATCLS={'网易官方':'official','其他版型':'other','非官方板子':'unofficial',
               '10人版型':'ten','未收录清单':'none'};
 function catTag(b){
   let s=`<span class="cat ${CATCLS[b.category]||'none'}">${esc(b.category)}</span>`;
   if(b.in_doc)s+=`<span class="games">${b.games} 场</span>`;
   if(b.is_new)s+='<span class="star" title="2025—2026 新板">★</span> ';
-  if(b.status==='暂停开放')s+='<span class="pausedtag">⏸ 暂停开放</span> ';
+  if(b.status==='非官方板子')s+='<span class="unofficialtag">非官方板子</span> ';
   return s;
 }
 
@@ -252,7 +252,7 @@ function init(){
   ].map(([v,t])=>`<span class="chip${v===''?' on':''}" data-q="${v}">${t}</span>`).join('');
   $('#cat').innerHTML=[
     ['','全部分类'],['网易官方','网易官方'],['其他版型','其他版型'],
-    ['暂停开放','暂停开放'],['10人版型','10 人版型'],['未收录清单','未收录清单'],
+    ['非官方板子','非官方板子'],['10人版型','10 人版型'],['未收录清单','未收录清单'],
     ['doc','仅清单收录'],['★','★ 新板']
   ].map(([v,t])=>`<span class="chip${v===''?' on':''}" data-c="${v}">${t}</span>`).join('');
   renderRoles(); renderAbout(); bind(); render();
@@ -432,7 +432,7 @@ function renderAbout(){
       <li>板子的「座位数」与「身份牌张数」可能不等（盗贼 / 丘比特 / 双身份等），页面会单独标注，不视为错误。</li>
     </ul>
     <h3>版型分类</h3>
-    <p>分类沿用法官版型清单口径：<b>网易官方</b>（网易狼人杀官方体系）、<b>其他版型</b>（网传板 / 群内自创）、<b>暂停开放</b>（备查但不计入开放板池）、<b>10 人版型</b>（单列）。<span class="star">★</span> 为 2025—2026 新板。分类、来源判定与场次都可直接搜索。</p>
+    <p>分类沿用法官版型清单口径：<b>网易官方</b>（网易狼人杀官方体系）、<b>其他版型</b>（网传板 / 群内自创）、<b>非官方板子</b>（群内自创 / 查无出处的非官方板，不计入官方板池）、<b>10 人版型</b>（单列）。<span class="star">★</span> 为 2025—2026 新板。分类、来源判定与场次都可直接搜索。</p>
     <h3>隐私</h3>
     <p>${esc(m.disclaimer)} 导出脚本只读取板子 / 身份 / 规则与清单元数据表，<b>不导出对局文件名、日期与清单原始配置文本</b>，也从不读取对局、座位与玩家表，所以仓库里没有任何昵称、战绩或游戏时间。</p>
     <h3>如何更新</h3>
@@ -485,9 +485,9 @@ function selfTest(){
   ROLE='';SORT='rules';render();
   ck(filtered()[0].rules.length>=filtered()[1].rules.length,'按规则数降序排序正确');
   SORT='id';QUICK='';render();
-  CAT='暂停开放';render();
-  ck(cards()===D.boards.filter(x=>x.category==='暂停开放').length&&
-     filtered().every(x=>x.category==='暂停开放'),'分类筛选：暂停开放板数量正确');
+  CAT='非官方板子';render();
+  ck(cards()===D.boards.filter(x=>x.category==='非官方板子').length&&
+     filtered().every(x=>x.category==='非官方板子'),'分类筛选：非官方板子数量正确');
   CAT='★';render();ck(cards()===D.boards.filter(x=>x.is_new).length&&
      filtered().every(x=>x.is_new),'分类筛选：★ 新板数量正确');
   CAT='doc';render();ck(cards()===m.doc_board_count&&

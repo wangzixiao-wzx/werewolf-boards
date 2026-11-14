@@ -143,7 +143,7 @@ def build(db_path):
         seats = b["player_count"]
         haystack = " ".join([
             b["name"], str(seats) + "人", note, category, origin, doc_name, status,
-            "★新板" if is_new else "", "暂停开放" if status == "暂停开放" else "",
+            "★新板" if is_new else "", "非官方板子" if status == "非官方板子" else "",
             " ".join(c["role"] for c in cards),
             " ".join(r["key"] + " " + r["value"] + " " + r["role"] for r in rules),
         ]).lower()
@@ -216,7 +216,7 @@ def markdown(data):
     groups = [
         ("网易官方", "一、网易狼人杀版型（12人）"),
         ("其他版型", "二、其他版型（12人）"),
-        ("暂停开放", "三、暂停开放版型（12人）"),
+        ("非官方板子", "三、非官方板子（12人）"),
         ("10人版型", "四、10 人版型"),
         ("未收录清单", "附：清单未收录的板型"),
     ]
@@ -231,8 +231,8 @@ def markdown(data):
                 line += f" · {b['games']} 场"
             if b["is_new"]:
                 line += " · ★"
-            if b["status"] == "暂停开放":
-                line += " · 暂停开放"
+            if b["status"] == "非官方板子":
+                line += " · 非官方板子"
             out.append(line)
         out.append("")
 
@@ -251,8 +251,8 @@ def markdown(data):
             tags = [f"**{b['category']}**", f"清单 {b['games']} 场"]
             if b["is_new"]:
                 tags.append("★ 2025—2026 新板")
-            if b["status"] == "暂停开放":
-                tags.append("⏸ 暂停开放（不计入开放板池）")
+            if b["status"] == "非官方板子":
+                tags.append("非官方板子（不计入官方板池）")
             if b["origin"]:
                 tags.append("来源判定：" + b["origin"])
             out += [" · ".join(tags), ""]
